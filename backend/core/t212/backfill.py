@@ -1,23 +1,46 @@
 """
-One-time historical backfill from Trading 212.
+Incremental backfill from Trading 212.
 
-Fetches all orders, dividends, and transactions using cursor-based
-pagination and persists them to PostgreSQL.
+On startup, checks the latest record in each table and only fetches
+data newer than that. If a table is empty, fetches everything.
 
 Usage:
     uv run python -m backend.core.t212.backfill
 """
 import asyncio
-import asyncpg
-from backend.core.t212.client import T212Client
-from backend.db.postgres import get_pool
 import logging
+from datetime import datetime
+
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
+
+from backend.core.t212.client import TradingAppClient
+from backend.db.models.postgres import Dividend, Order
+from backend.db.postgres import close_engine, create_tables, get_session_factory
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
-async def backfill_orders(client: T212Client, pool: asyncpg.Pool) -> int:
+def parse_dt(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
+async def get_latest(column) -> datetime | None:
+    async with get_session_factory()() as session:
+        result = await session.execute(select(func.max(column)))
+        return result.scalar()
+
+
+async def backfill_orders(client: TradingAppClient) -> int:
+    since = await get_latest(Order.created_at)
+    if since:
+        log.info(f"Orders: backfilling from {since}")
+    else:
+        log.info("Orders: table empty, backfilling everything")
+
     cursor = None
     total = 0
 
@@ -28,44 +51,62 @@ async def backfill_orders(client: T212Client, pool: asyncpg.Pool) -> int:
         if not items:
             break
 
-        await pool.executemany(
-            """
-            INSERT INTO orders (
-                id, ticker, name, type, quantity, filled_quantity,
-                limit_price, fill_price, fill_cost, status, created_at, filled_at, currency
-            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-            ON CONFLICT (id) DO NOTHING
-            """,
-            [
-                (
-                    o["id"],
-                    o.get("ticker"),
-                    o.get("name"),
-                    o.get("type"),
-                    o.get("quantity"),
-                    o.get("filledQuantity"),
-                    o.get("limitPrice"),
-                    o.get("fillPrice"),
-                    o.get("fillCost"),
-                    o.get("status"),
-                    o.get("creationTime"),
-                    o.get("dateExecuted"),
-                    o.get("currencyCode", "GBP"),
-                )
-                for o in items
-            ],
-        )
-        total += len(items)
-        log.info(f"Orders: inserted {total} so far...")
+        new_items = []
+        done = False
+        for o in items:
+            created_at = parse_dt(o["order"].get("createdAt"))
+            if since and created_at and created_at <= since:
+                done = True
+                break
+            new_items.append(o)
+
+        if new_items:
+            rows = [
+                {
+                    "id": str(o["order"]["id"]),
+                    "ticker": o["order"].get("ticker"),
+                    "name": o["order"].get("instrument", {}).get("name"),
+                    "type": o["order"].get("type"),
+                    "quantity": o.get("fill", {}).get("quantity"),
+                    "filled_quantity": o.get("fill", {}).get("quantity"),
+                    "limit_price": o["order"].get("limitPrice"),
+                    "fill_price": o.get("fill", {}).get("price"),
+                    "fill_cost": o.get("fill", {}).get("walletImpact", {}).get("netValue"),
+                    "status": o["order"].get("status"),
+                    "created_at": parse_dt(o["order"].get("createdAt")),
+                    "filled_at": parse_dt(o.get("fill", {}).get("filledAt")),
+                    "currency": o["order"].get("currency", "GBP"),
+                }
+                for o in new_items
+            ]
+            async with get_session_factory()() as session:
+                stmt = insert(Order).values(rows).on_conflict_do_nothing(index_elements=["id"])
+                await session.execute(stmt)
+                await session.commit()
+
+            total += len(new_items)
+            log.info(f"Orders: inserted {total} so far...")
+
+        if done:
+            log.info("Orders: reached existing data, stopping")
+            break
 
         cursor = response.get("nextPagePath")
         if not cursor:
             break
 
+        await asyncio.sleep(10)
+
     return total
 
 
-async def backfill_dividends(client: T212Client, pool: asyncpg.Pool) -> int:
+async def backfill_dividends(client: TradingAppClient) -> int:
+    since = await get_latest(Dividend.paid_at)
+    if since:
+        log.info(f"Dividends: backfilling from {since}")
+    else:
+        log.info("Dividends: table empty, backfilling everything")
+
     cursor = None
     total = 0
 
@@ -76,89 +117,65 @@ async def backfill_dividends(client: T212Client, pool: asyncpg.Pool) -> int:
         if not items:
             break
 
-        await pool.executemany(
-            """
-            INSERT INTO dividends (
-                id, ticker, name, quantity, amount, amount_in_gbp, tax_withheld, paid_at, currency
-            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-            ON CONFLICT (id) DO NOTHING
-            """,
-            [
-                (
-                    d["id"],
-                    d.get("ticker"),
-                    d.get("name"),
-                    d.get("quantity"),
-                    d.get("amount"),
-                    d.get("amountInEuro"),  # T212 may return in account currency
-                    d.get("withheldTax", 0),
-                    d.get("paidOn"),
-                    d.get("currencyCode", "GBP"),
-                )
-                for d in items
-            ],
-        )
-        total += len(items)
-        log.info(f"Dividends: inserted {total} so far...")
+        new_items = []
+        done = False
+        for d in items:
+            paid_at = parse_dt(d.get("paidOn"))
+            if since and paid_at and paid_at <= since:
+                done = True
+                break
+            new_items.append(d)
+
+        if new_items:
+            rows = [
+                {
+                    "id": d["reference"],
+                    "ticker": d.get("ticker"),
+                    "name": d.get("instrument", {}).get("name"),
+                    "quantity": d.get("quantity"),
+                    "amount": d.get("amount"),
+                    "amount_in_gbp": d.get("amountInEuro"),
+                    "tax_withheld": 0,
+                    "paid_at": parse_dt(d.get("paidOn")),
+                    "currency": d.get("currency", "GBP"),
+                }
+                for d in new_items
+            ]
+            async with get_session_factory()() as session:
+                stmt = insert(Dividend).values(rows).on_conflict_do_nothing(index_elements=["id"])
+                await session.execute(stmt)
+                await session.commit()
+
+            total += len(new_items)
+            log.info(f"Dividends: inserted {total} so far...")
+
+        if done:
+            log.info("Dividends: reached existing data, stopping")
+            break
 
         cursor = response.get("nextPagePath")
         if not cursor:
             break
 
-    return total
-
-
-async def backfill_transactions(client: T212Client, pool: asyncpg.Pool) -> int:
-    cursor = None
-    total = 0
-
-    while True:
-        response = await client.get_transactions(cursor=cursor, limit=50)
-        items = response.get("items", [])
-
-        if not items:
-            break
-
-        await pool.executemany(
-            """
-            INSERT INTO transactions (id, type, amount, currency, created_at, reference)
-            VALUES ($1,$2,$3,$4,$5,$6)
-            ON CONFLICT (id) DO NOTHING
-            """,
-            [
-                (
-                    t["id"],
-                    t.get("type"),
-                    t.get("amount"),
-                    t.get("currencyCode", "GBP"),
-                    t.get("dateTime"),
-                    t.get("reference"),
-                )
-                for t in items
-            ],
-        )
-        total += len(items)
-        log.info(f"Transactions: inserted {total} so far...")
-
-        cursor = response.get("nextPagePath")
-        if not cursor:
-            break
+        await asyncio.sleep(10)
 
     return total
 
 
 async def run_backfill() -> None:
-    pool = await get_pool()
-    async with T212Client() as client:
-        log.info("Starting T212 historical backfill...")
+    log.info("Creating tables if not exist...")
+    await create_tables()
 
-        orders = await backfill_orders(client, pool)
-        dividends = await backfill_dividends(client, pool)
-        transactions = await backfill_transactions(client, pool)
+    async with TradingAppClient() as client:
+        log.info("Starting incremental backfill...")
 
+        orders = await backfill_orders(client)
+        dividends = await backfill_dividends(client)
         log.info(
-            f"Backfill complete. Orders: {orders}, Dividends: {dividends}, Transactions: {transactions}"
+            f"Backfill complete. Orders: {orders}, Dividends: {dividends}"
         )
+
+    await close_engine()
 
 
 if __name__ == "__main__":

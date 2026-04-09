@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS orders (
     ticker              TEXT NOT NULL,
     name                TEXT,
     type                TEXT NOT NULL,          -- BUY / SELL
-    quantity            NUMERIC NOT NULL,
+    quantity            NUMERIC,
     filled_quantity     NUMERIC,
     limit_price         NUMERIC,
     fill_price          NUMERIC,
@@ -26,39 +26,4 @@ CREATE TABLE IF NOT EXISTS dividends (
     tax_withheld        NUMERIC DEFAULT 0,
     paid_at             TIMESTAMPTZ NOT NULL,
     currency            TEXT DEFAULT 'GBP'
-);
-
--- Transactions: deposits, withdrawals, interest
-CREATE TABLE IF NOT EXISTS transactions (
-    id                  TEXT PRIMARY KEY,
-    type                TEXT NOT NULL,          -- DEPOSIT, WITHDRAWAL, INTEREST
-    amount              NUMERIC NOT NULL,
-    currency            TEXT DEFAULT 'GBP',
-    created_at          TIMESTAMPTZ NOT NULL,
-    reference           TEXT
-);
-
--- Portfolio snapshots: daily total value of the ISA
-CREATE TABLE IF NOT EXISTS portfolio_snapshots (
-    id                  SERIAL PRIMARY KEY,
-    snapshot_date       DATE NOT NULL UNIQUE,
-    total_value         NUMERIC NOT NULL,       -- total portfolio value in GBP
-    invested_value      NUMERIC NOT NULL,       -- total amount invested
-    cash                NUMERIC NOT NULL,
-    pnl                 NUMERIC NOT NULL,       -- unrealised + realised
-    pnl_pct             NUMERIC NOT NULL
-);
-
--- SP500 daily closes for benchmark comparison
-CREATE TABLE IF NOT EXISTS sp500_history (
-    price_date          DATE NOT NULL PRIMARY KEY,
-    close_price         NUMERIC NOT NULL,
-    indexed_value       NUMERIC                 -- pre-computed index to 100 from portfolio start
-);
-
--- Tracks last cursor position for incremental T212 API syncs
-CREATE TABLE IF NOT EXISTS sync_cursors (
-    endpoint            TEXT PRIMARY KEY,       -- 'orders', 'dividends', 'transactions'
-    last_cursor         TEXT,
-    last_synced_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

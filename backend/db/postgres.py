@@ -1,26 +1,38 @@
-import asyncpg
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlmodel import SQLModel
 from backend.config import settings
 
-_pool: asyncpg.Pool | None = None
+_engine = None
+_session_factory = None
 
 
-async def get_pool() -> asyncpg.Pool:
-    global _pool
-    if _pool is None:
-        _pool = await asyncpg.create_pool(
-            host=settings.postgres_host,
-            port=settings.postgres_port,
-            database=settings.postgres_db,
-            user=settings.postgres_user,
-            password=settings.postgres_password,
-            min_size=2,
-            max_size=10,
+def get_engine():
+    global _engine
+    if _engine is None:
+        dsn = (
+            f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}"
+            f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
         )
-    return _pool
+        _engine = create_async_engine(dsn, pool_size=5, max_overflow=10)
+    return _engine
 
 
-async def close_pool() -> None:
-    global _pool
-    if _pool:
-        await _pool.close()
-        _pool = None
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    global _session_factory
+    if _session_factory is None:
+        _session_factory = async_sessionmaker(get_engine(), expire_on_commit=False)
+    return _session_factory
+
+
+async def create_tables() -> None:
+    import backend.db.models.postgres  # noqa: F401 — registers models with SQLModel metadata
+    async with get_engine().begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+
+async def close_engine() -> None:
+    global _engine, _session_factory
+    if _engine:
+        await _engine.dispose()
+        _engine = None
+        _session_factory = None

@@ -1,9 +1,10 @@
+import asyncio
 import httpx
 from typing import Any
 from backend.config import settings
 
 
-class T212Client:
+class TradingAppClient:
     """Async HTTP client for the Trading 212 REST API (ISA account)."""
 
     BASE_URL = settings.t212_base_url
@@ -19,9 +20,14 @@ class T212Client:
         await self._client.aclose()
 
     async def _get(self, path: str, params: dict | None = None) -> Any:
-        response = await self._client.get(path, params=params)
-        response.raise_for_status()
-        return response.json()
+        while True:
+            response = await self._client.get(path, params=params)
+            if response.status_code == 429:
+                wait = int(response.headers.get("Retry-After", 60))
+                await asyncio.sleep(wait)
+                continue
+            response.raise_for_status()
+            return response.json()
 
     # --- Account ---
 
@@ -40,6 +46,8 @@ class T212Client:
 
     async def get_orders(self, cursor: str | None = None, limit: int = 50) -> dict:
         """Returns filled orders. Supports cursor-based pagination."""
+        if cursor and cursor.startswith("/"):
+            return await self._get(cursor)
         params: dict = {"limit": limit}
         if cursor:
             params["cursor"] = cursor
@@ -47,6 +55,8 @@ class T212Client:
 
     async def get_dividends(self, cursor: str | None = None, limit: int = 50) -> dict:
         """Returns dividend payments received."""
+        if cursor and cursor.startswith("/"):
+            return await self._get(cursor)
         params: dict = {"limit": limit}
         if cursor:
             params["cursor"] = cursor
@@ -54,12 +64,14 @@ class T212Client:
 
     async def get_transactions(self, cursor: str | None = None, limit: int = 50) -> dict:
         """Returns cash transactions (deposits, withdrawals)."""
+        if cursor and cursor.startswith("/"):
+            return await self._get(cursor)
         params: dict = {"limit": limit}
         if cursor:
             params["cursor"] = cursor
         return await self._get("/api/v0/equity/history/transactions", params=params)
 
-    async def __aenter__(self) -> "T212Client":
+    async def __aenter__(self) -> "TradingAppClient":
         return self
 
     async def __aexit__(self, *args: Any) -> None:
