@@ -65,17 +65,23 @@ async def backfill_orders(client: TradingAppClient) -> int:
                 {
                     "id": str(o["order"]["id"]),
                     "ticker": o["order"].get("ticker"),
+                    "isin": o["order"].get("instrument", {}).get("isin"),
                     "name": o["order"].get("instrument", {}).get("name"),
+                    "instrument_currency": o["order"].get("instrument", {}).get("currency"),
                     "type": o["order"].get("type"),
-                    "quantity": o.get("fill", {}).get("quantity"),
-                    "filled_quantity": o.get("fill", {}).get("quantity"),
-                    "limit_price": o["order"].get("limitPrice"),
-                    "fill_price": o.get("fill", {}).get("price"),
-                    "fill_cost": o.get("fill", {}).get("walletImpact", {}).get("netValue"),
+                    "side": o["order"].get("side"),
+                    "strategy": o["order"].get("strategy"),
                     "status": o["order"].get("status"),
+                    "initiated_from": o["order"].get("initiatedFrom"),
                     "created_at": parse_dt(o["order"].get("createdAt")),
+                    "fill_id": str(o["fill"]["id"]) if o.get("fill") else None,
+                    "trading_method": o.get("fill", {}).get("tradingMethod"),
+                    "price_of_stock": o.get("fill", {}).get("price"), # actual price in currency of stock
+                    "quantity": o.get("fill", {}).get("quantity"), # quantity of stock purchased
+                    "cost_in_pounds": o.get("fill", {}).get("walletImpact", {}).get("netValue"), # cost in £
+                    "executed_currency": o.get("fill", {}).get("walletImpact", {}).get("currency"), # currency conversion
+                    "fx_rate": o.get("fill", {}).get("walletImpact", {}).get("fxRate"),
                     "filled_at": parse_dt(o.get("fill", {}).get("filledAt")),
-                    "currency": o["order"].get("currency", "GBP"),
                 }
                 for o in new_items
             ]
@@ -134,10 +140,10 @@ async def backfill_dividends(client: TradingAppClient) -> int:
                     "name": d.get("instrument", {}).get("name"),
                     "quantity": d.get("quantity"),
                     "amount": d.get("amount"),
-                    "amount_in_gbp": d.get("amountInEuro"),
+                    "amount_in_euro": d.get("amountInEuro"),
                     "tax_withheld": 0,
                     "paid_at": parse_dt(d.get("paidOn")),
-                    "currency": d.get("currency", "GBP"),
+                    "currency": d.get("currency"),
                 }
                 for d in new_items
             ]

@@ -1,7 +1,7 @@
 from datetime import date, datetime
-from typing import Optional
-from sqlalchemy import DateTime
-from sqlmodel import Field, SQLModel
+from typing import Any, Optional
+from sqlalchemy import DateTime, JSON
+from sqlmodel import Column, Field, SQLModel
 
 
 def _dt(nullable: bool = False, server_default: str | None = None):
@@ -16,19 +16,29 @@ def _dt(nullable: bool = False, server_default: str | None = None):
 class Order(SQLModel, table=True):
     __tablename__ = "orders"
 
+    # Order fields
     id: str = Field(primary_key=True)
-    ticker: str
+    ticker: Optional[str] = None
+    isin: Optional[str] = None
     name: Optional[str] = None
-    type: str
-    quantity: Optional[float] = None
-    filled_quantity: Optional[float] = None
-    limit_price: Optional[float] = None
-    fill_price: Optional[float] = None
-    fill_cost: Optional[float] = None
-    status: str
+    instrument_currency: Optional[str] = None   # currency the stock trades in (e.g. GBX, USD)
+    type: Optional[str] = None                  # MARKET, LIMIT, STOP
+    side: Optional[str] = None                  # BUY, SELL
+    strategy: Optional[str] = None              # QUANTITY, VALUE
+    status: Optional[str] = None
+    initiated_from: Optional[str] = None        # API, AUTOINVEST, etc.
     created_at: datetime = _dt()
+
+    # Fill fields
+    fill_id: Optional[str] = None
+    trading_method: Optional[str] = None        # OTC, TOTV
+    price_of_stock: Optional[float] = None      # actual price in instrument_currency
+    quantity: Optional[float] = None            # quantity of stock purchased
+    cost_in_pounds: Optional[float] = None      # walletImpact.netValue — cost in GBP
+    executed_currency: Optional[str] = None     # walletImpact.currency
+    fx_rate: Optional[float] = None             # conversion rate to GBP
     filled_at: Optional[datetime] = _dt(nullable=True)
-    currency: str = "GBP"
+
     saved_at: Optional[datetime] = _dt(nullable=True, server_default="NOW()")
 
 
@@ -40,8 +50,8 @@ class Dividend(SQLModel, table=True):
     name: Optional[str] = None
     quantity: float
     amount: float
-    amount_in_gbp: Optional[float] = None
+    amount_in_euro: Optional[float] = None
     tax_withheld: float = 0
     paid_at: datetime = _dt()
-    currency: str = "GBP"
+    currency: str
     saved_at: Optional[datetime] = _dt(nullable=True, server_default="NOW()")
