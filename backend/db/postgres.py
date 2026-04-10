@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
-from backend.config import settings
+import backend.config as config
 
 _engine = None
 _session_factory = None
@@ -10,8 +10,8 @@ def get_engine():
     global _engine
     if _engine is None:
         dsn = (
-            f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}"
-            f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}"
+            f"postgresql+asyncpg://{config.POSTGRES_USER}:{config.POSTGRES_PASSWORD}"
+            f"@{config.POSTGRES_HOST}:{config.POSTGRES_PORT}/{config.POSTGRES_DB}"
         )
         _engine = create_async_engine(dsn, pool_size=5, max_overflow=10)
     return _engine

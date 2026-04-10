@@ -1,23 +1,15 @@
-from pydantic_settings import BaseSettings
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-class Settings(BaseSettings):
-    t212_api_key: str
-    t212_base_url: str = "https://live.trading212.com"
+T212_API_KEY = os.environ["T212_API_KEY"]
+T212_BASE_URL = os.environ.get("T212_BASE_URL", "https://live.trading212.com")
 
-    postgres_host: str = "localhost"
-    postgres_port: int = 5432
-    postgres_db: str = "maybank"
-    postgres_user: str = "maybank"
-    postgres_password: str
+POSTGRES_HOST = os.environ.get("POSTGRES_HOST")
+POSTGRES_PORT = int(os.environ.get("POSTGRES_PORT"))
+POSTGRES_DB = os.environ.get("POSTGRES_DB")
+POSTGRES_USER = os.environ.get("POSTGRES_USER")
+POSTGRES_PASSWORD = os.environ["POSTGRES_PASSWORD"]
 
-    redis_host: str = "localhost"
-    redis_port: int = 6379
-
-    duckdb_path: str = "./data/maybank.duckdb"
-
-    class Config:
-        env_file = ".env"
-
-
-settings = Settings()
+DUCKDB_PATH = os.environ.get("DUCKDB_PATH", "./data/maybank.duckdb")

@@ -1,18 +1,16 @@
 import asyncio
 import httpx
 from typing import Any
-from backend.config import settings
+import backend.config as config
 
 
 class TradingAppClient:
     """Async HTTP client for the Trading 212 REST API (ISA account)."""
 
-    BASE_URL = settings.t212_base_url
-
     def __init__(self) -> None:
         self._client = httpx.AsyncClient(
-            base_url=self.BASE_URL,
-            headers={"Authorization": settings.t212_api_key},
+            base_url=config.T212_BASE_URL,
+            headers={"Authorization": config.T212_API_KEY},
             timeout=30.0,
         )
 
