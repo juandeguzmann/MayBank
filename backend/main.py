@@ -2,12 +2,17 @@ from contextlib import asynccontextmanager
 import logging
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
+from backend.api.dividends import router as dividends_router
 from backend.core.t212.backfill import run_backfill
 from backend.db.postgres import close_engine
 
 log = logging.getLogger(__name__)
+
+templates = Jinja2Templates(directory="frontend/templates")
 
 
 @asynccontextmanager
@@ -20,10 +25,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="MayBank", lifespan=lifespan)
 
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+app.include_router(dividends_router)
+
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/")
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 def start():

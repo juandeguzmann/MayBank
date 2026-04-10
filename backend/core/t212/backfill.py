@@ -16,7 +16,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from backend.core.t212.client import TradingAppClient
 from backend.db.models.postgres import Dividend, Order
-from backend.db.postgres import create_tables, get_session_factory
+from backend.db.postgres import create_tables, session_factory
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def parse_dt(value: str | None) -> datetime | None:
 
 
 def get_latest(column) -> datetime | None:
-    with get_session_factory()() as session:
+    with session_factory() as session:
         result = session.execute(select(func.max(column)))
         return result.scalar()
 
@@ -82,7 +82,7 @@ def backfill_orders(client: TradingAppClient) -> int:
                 }
                 for o in new_items
             ]
-            with get_session_factory()() as session:
+            with session_factory() as session:
                 stmt = insert(Order).values(rows).on_conflict_do_nothing(index_elements=["id"])
                 session.execute(stmt)
                 session.commit()
@@ -139,7 +139,7 @@ def backfill_dividends(client: TradingAppClient) -> int:
                 }
                 for d in new_items
             ]
-            with get_session_factory()() as session:
+            with session_factory() as session:
                 stmt = insert(Dividend).values(rows).on_conflict_do_nothing(index_elements=["id"])
                 session.execute(stmt)
                 session.commit()
