@@ -13,9 +13,9 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("App startup: running backfill...")
-    await run_backfill()
+    run_backfill()
     yield
-    await close_engine()
+    close_engine()
 
 
 app = FastAPI(title="MayBank", lifespan=lifespan)
@@ -27,5 +27,4 @@ async def health():
 
 
 def start():
-    import uvicorn
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
