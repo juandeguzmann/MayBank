@@ -12,7 +12,12 @@ async function navigate(path) {
 
   if (currentPage?.unmount) currentPage.unmount();
 
-  const mod = await loader();
+  const [html, mod] = await Promise.all([
+    fetch(`/pages/${id}`).then(r => r.text()),
+    loader(),
+  ]);
+
+  container.innerHTML = html;
   currentPage = mod;
   mod.mount(container);
 

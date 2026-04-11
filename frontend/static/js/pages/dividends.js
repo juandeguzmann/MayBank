@@ -91,42 +91,7 @@ async function loadTickers() {
   `).join('');
 }
 
-export function mount(container) {
-  container.innerHTML = `
-    <div class="tab-panel active">
-      <div class="section-header">
-        <h2>Dividend Income</h2>
-        <div class="summary-pills" id="summary-pills"></div>
-      </div>
-
-      <div class="card chart-card">
-        <h3>Monthly Payouts</h3>
-        <div class="chart-wrapper">
-          <canvas id="monthly-chart"></canvas>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>By Stock</h3>
-        <div class="table-wrapper">
-          <table id="ticker-table">
-            <thead>
-              <tr>
-                <th>Ticker</th>
-                <th>Name</th>
-                <th class="num">Total Received</th>
-                <th class="num">Payments</th>
-              </tr>
-            </thead>
-            <tbody id="ticker-tbody">
-              <tr><td colspan="4" class="loading">Loading...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  `;
-
+export function mount() {
   loadMonthly();
   loadTickers();
 }

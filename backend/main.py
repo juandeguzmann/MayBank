@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from backend.api.dividends import router as dividends_router
+from backend.api.portfolio import router as portfolio_router
 from backend.core.t212.backfill import run_backfill
 from backend.db.postgres import close_engine
 
@@ -27,6 +28,7 @@ app = FastAPI(title="MayBank", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 app.include_router(dividends_router)
+app.include_router(portfolio_router)
 
 
 @app.get("/health")
@@ -37,6 +39,16 @@ async def health():
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/pages/home")
+async def page_home(request: Request):
+    return templates.TemplateResponse("pages/home.html", {"request": request})
+
+
+@app.get("/pages/dividends")
+async def page_dividends(request: Request):
+    return templates.TemplateResponse("pages/dividends.html", {"request": request})
 
 
 def start():

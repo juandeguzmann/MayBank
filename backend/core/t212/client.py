@@ -35,6 +35,9 @@ class TradingAppClient:
     def get_cash(self) -> dict:
         return self._get("/api/v0/equity/account/cash")
 
+    def get_account_summary(self) -> dict:
+        return self._get("/api/v0/equity/account/summary")
+
     # --- Portfolio ---
 
     def get_portfolio(self) -> list[dict]:
