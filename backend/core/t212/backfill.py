@@ -13,9 +13,10 @@ from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
+from urllib.parse import parse_qs
 
 from backend.core.t212.client import TradingAppClient
-from backend.db.models.postgres import Dividend, Order
+from backend.db.models.postgres import Dividend, Order, Transactions
 from backend.db.postgres import create_tables, session_factory
 
 log = logging.getLogger(__name__)
@@ -160,6 +161,64 @@ def backfill_dividends(client: TradingAppClient) -> int:
     return total
 
 
+def backfill_transactions(client: TradingAppClient) -> int:
+    since = get_latest(Transactions.date_time)
+    log.info(f"Transactions: backfilling from {since}" if since else "Transactions: table empty, backfilling everything")
+
+    cursor = None
+    next_time = None
+    total = 0
+
+    while True:
+        response = client.get_transactions(cursor=cursor, limit=PAGE_SIZE, time=next_time)
+        items = response.get("items", [])
+
+        if not items:
+            break
+
+        new_items, done = [], False
+        for d in items:
+            if since and (ts := parse_dt(d.get("dateTime"))) and ts <= since:
+                done = True
+                break
+            new_items.append(d)
+
+        if new_items:
+            rows = [
+                {
+                    "type": d["type"],
+                    "amount": d.get("amount"),
+                    "currency": d.get("currency"),
+                    "reference": d.get("reference"),
+                    "date_time": d.get("dateTime"),
+                }
+                for d in new_items
+            ]
+            with session_factory() as session:
+                stmt = insert(Transactions).values(rows).on_conflict_do_nothing(index_elements=["reference"])
+                session.execute(stmt)
+                session.commit()
+
+            total += len(new_items)
+            log.info(f"Transactions: {total} inserted so far...")
+
+        if done:
+            log.info("Transactions: reached existing data, stopping")
+            break
+
+        next_page = response.get("nextPagePath")
+        if not next_page:
+            break
+
+        parsed = parse_qs(next_page)
+        cursor = parsed.get("cursor", [None])[0]
+        next_time = parsed.get("time", [None])[0]
+
+        time.sleep(RATE_LIMIT_DELAY)
+
+    return total
+
+
 def run_backfill() -> None:
     log.info("Creating tables if not exist...")
     create_tables()
@@ -168,6 +227,7 @@ def run_backfill() -> None:
         log.info("Starting incremental backfill...")
         orders = backfill_orders(client)
         dividends = backfill_dividends(client)
+        dividends = backfill_transactions(client)
         log.info(f"Backfill complete. Orders: {orders}, Dividends: {dividends}")
 
 

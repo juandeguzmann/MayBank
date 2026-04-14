@@ -55,3 +55,14 @@ class Dividend(SQLModel, table=True):
     paid_at: datetime = _dt()
     currency: str
     saved_at: Optional[datetime] = _dt(nullable=True, server_default="NOW()")
+
+
+class Transactions(SQLModel, table=True):
+    __tablename__ = "transactions"
+
+    type: str
+    amount: float
+    currency: str
+    reference: str = Field(primary_key=True)
+    date_time: datetime = _dt()
+    saved_at: Optional[datetime] = _dt(nullable=True, server_default="NOW()")

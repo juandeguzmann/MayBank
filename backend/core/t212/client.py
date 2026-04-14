@@ -63,13 +63,15 @@ class TradingAppClient:
             params["cursor"] = cursor
         return self._get("/api/v0/equity/history/dividends", params=params)
 
-    def get_transactions(self, cursor: str | None = None, limit: int = 50) -> dict:
+    def get_transactions(self, cursor: str | None = None, limit: int = 50, time: str | None = None) -> dict:
         """Returns cash transactions (deposits, withdrawals)."""
         if cursor and cursor.startswith("/"):
             return self._get(cursor)
         params: dict = {"limit": limit}
         if cursor:
             params["cursor"] = cursor
+        if time:
+            params["time"] = time
         return self._get("/api/v0/equity/history/transactions", params=params)
 
     def __enter__(self) -> "TradingAppClient":
