@@ -23,6 +23,13 @@ async function loadSummary() {
   const realisedEl = document.getElementById('stat-realised');
   realisedEl.textContent = fmt(data.realised_gain, currency);
   realisedEl.className = `stat-value ${data.realised_gain >= 0 ? 'gain' : 'loss'}`;
+
+  const netCashflowEl = document.getElementById('stat-net-cashflow');
+  netCashflowEl.textContent = fmt(data.net_cashflow, currency);
+  netCashflowEl.className = `stat-value ${data.net_cashflow >= 0 ? 'gain' : 'loss'}`;
+
+  document.getElementById('stat-net-deposits').textContent = fmt(data.net_deposits, currency);
+  document.getElementById('stat-net-withdrawals').textContent = fmt(data.net_withdrawals, currency);
 }
 
 loadSummary();

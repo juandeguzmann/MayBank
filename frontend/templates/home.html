@@ -3,30 +3,41 @@
 {% block content %}
 <div class="tab-panel active">
   <div class="stat-cards">
-    <div class="stat-card">
+    <div class="stat-card stat-card--featured">
       <div class="stat-label">Portfolio Value</div>
       <div class="stat-value" id="stat-portfolio-value">—</div>
       <div class="stat-sub">Total incl. cash</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Cash Available</div>
-      <div class="stat-value" id="stat-cash">—</div>
-      <div class="stat-sub">Free to invest</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Total Invested</div>
-      <div class="stat-value" id="stat-invested">—</div>
-      <div class="stat-sub">Cost basis</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Unrealised Gain</div>
-      <div class="stat-value" id="stat-gain">—</div>
-      <div class="stat-sub" id="stat-gain-sub">—</div>
+      <div class="stat-breakdown">
+        <div class="stat-breakdown-item">
+          <div class="stat-label">Cash Available</div>
+          <div class="stat-value stat-value--sm" id="stat-cash">—</div>
+          <div class="stat-sub">Free to invest</div>
+        </div>
+        <div class="stat-breakdown-item">
+          <div class="stat-label">Total Invested</div>
+          <div class="stat-value stat-value--sm" id="stat-invested">—</div>
+          <div class="stat-sub">Cost basis</div>
+        </div>
+        <div class="stat-breakdown-item">
+          <div class="stat-label">Unrealised Gain</div>
+          <div class="stat-value stat-value--sm" id="stat-gain">—</div>
+          <div class="stat-sub" id="stat-gain-sub">—</div>
+        </div>
+      </div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Realised Gain</div>
       <div class="stat-value" id="stat-realised">—</div>
       <div class="stat-sub">Closed positions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Net Cashflow</div>
+      <div class="stat-value" id="stat-net-cashflow">—</div>
+      <div class="stat-sub">
+        <span id="stat-net-deposits" class="gain">—</span>
+        &nbsp;/&nbsp;
+        <span id="stat-net-withdrawals" class="loss">—</span>
+      </div>
     </div>
   </div>
 </div>

@@ -8,6 +8,9 @@ class PortfolioSummary(BaseModel):
     unrealised_gain: float
     unrealised_gain_pct: float
     realised_gain: float
+    net_deposits: float
+    net_withdrawals: float
+    net_cashflow: float
     currency: str = "GBP"
 
 
