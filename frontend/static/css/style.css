@@ -254,6 +254,12 @@ td.loading {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  transition: none;
+}
+
+.stat-card * {
+  transition: none !important;
+  animation: none !important;
 }
 
 .stat-card--featured {

@@ -33,3 +33,4 @@ async function loadSummary() {
 }
 
 loadSummary();
+setInterval(loadSummary, 5000);
