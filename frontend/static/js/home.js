@@ -25,8 +25,4 @@ async function loadSummary() {
   realisedEl.className = `stat-value ${data.realised_gain >= 0 ? 'gain' : 'loss'}`;
 }
 
-export function mount() {
-  loadSummary();
-}
-
-export function unmount() {}
+loadSummary();

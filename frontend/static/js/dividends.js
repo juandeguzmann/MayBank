@@ -91,14 +91,5 @@ async function loadTickers() {
   `).join('');
 }
 
-export function mount() {
-  loadMonthly();
-  loadTickers();
-}
-
-export function unmount() {
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
-}
+loadMonthly();
+loadTickers();

@@ -15,13 +15,21 @@
     </header>
 
     <nav class="tabs">
-      <a class="tab" href="home">Home</a>
-      <a class="tab" href="dividends">Dividend Income</a>
+      <a class="tab" href="/home">Home</a>
+      <a class="tab" href="/dividends">Dividend Income</a>
+      <a class="tab" href="/docs">API</a>
     </nav>
 
-    <main id="page"></main>
+    <main id="page">
+      {% block content %}{% endblock %}
+    </main>
   </div>
 
-  <script type="module" src="/static/js/main.js"></script>
+  <script>
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.classList.toggle('active', tab.getAttribute('href') === location.pathname);
+    });
+  </script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -6,13 +6,15 @@ from backend.models.portfolio import (
     PortfolioSummary,
 )
 
-router = APIRouter(prefix="/api/portfolio")
+router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
 
 
 @router.get("/summary", response_model=PortfolioSummaryResponse)
 def get_summary():
     with TradingAppClient() as client:
         data = client.get_account_summary()
+    
+    # Add querey function to get deposits and withdrawral from traansactions database
 
     investments = data.get("investments", {})
     cash = data.get("cash", {})

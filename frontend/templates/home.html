@@ -1,3 +1,6 @@
+{% extends "index.html" %}
+
+{% block content %}
 <div class="tab-panel active">
   <div class="stat-cards">
     <div class="stat-card">
@@ -27,3 +30,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/home.js"></script>
+{% endblock %}

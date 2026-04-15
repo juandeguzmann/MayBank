@@ -1,6 +1,6 @@
 const pages = {
-  home: () => import('./pages/home.js'),
-  dividends: () => import('./pages/dividends.js'),
+  home: () => import('./home.js'),
+  dividends: () => import('./dividends.js'),
 };
 
 const container = document.getElementById('page');
@@ -13,7 +13,7 @@ async function navigate(path) {
   if (currentPage?.unmount) currentPage.unmount();
 
   const [html, mod] = await Promise.all([
-    fetch(`/pages/${id}`).then(r => r.text()),
+    fetch(`/${id}`).then(r => r.text()),
     loader(),
   ]);
 

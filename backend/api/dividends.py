@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.db.deps import get_session
-from backend.db.repositories.dividends import get_dividends_by_ticker, get_monthly_dividends
+from backend.db.queries.dividends import get_dividends_by_ticker, get_monthly_dividends
 from backend.models.dividends import MonthlyDividendsResponse, TickerDividendsResponse
 
 router = APIRouter(prefix="/api/dividends", tags=["dividends"])
