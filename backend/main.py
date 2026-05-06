@@ -1,5 +1,8 @@
 from contextlib import asynccontextmanager
 import logging
+import multiprocessing
+import signal
+import sys
 
 import uvicorn
 from fastapi import FastAPI, Request
@@ -9,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 
 from backend.api.dividends import router as dividends_router
 from backend.api.portfolio import router as portfolio_router
+from backend.core.finnhub.live_price_manager import run as run_live_prices
 from backend.core.t212.backfill import run_backfill
 from backend.db.postgres import close_engine
 
@@ -52,5 +56,27 @@ async def dividends(request: Request):
     return templates.TemplateResponse("dividends.html", {"request": request})
 
 
-def start():
+def run_api():
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+def start():
+    processes = [
+        multiprocessing.Process(target=run_api, name="api", daemon=True),
+        multiprocessing.Process(target=run_live_prices, name="live-price-manager", daemon=True),
+    ]
+
+    def _shutdown(sig, frame):
+        for p in processes:
+            p.terminate()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, _shutdown)
+    signal.signal(signal.SIGTERM, _shutdown)
+
+    for p in processes:
+        p.start()
+        log.info("Started process %s (pid=%s)", p.name, p.pid)
+
+    for p in processes:
+        p.join()

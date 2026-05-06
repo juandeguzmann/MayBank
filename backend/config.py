@@ -13,3 +13,5 @@ POSTGRES_USER = os.environ.get("POSTGRES_USER")
 POSTGRES_PASSWORD = os.environ["POSTGRES_PASSWORD"]
 
 DUCKDB_PATH = os.environ.get("DUCKDB_PATH", "./data/maybank.duckdb")
+
+FINNHUB_API_KEY = os.environ.get("FINNHUB_API_KEY", "")
